@@ -1,10 +1,9 @@
 import React from 'react';
-import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { TooltipProvider } from './components/ui/tooltip';
 import { ThemeProvider } from './components/ThemeProvider';
-import Layout from './components/Layout'; // Import the Layout component
+import Layout from './components/Layout';
 
 import { Toaster } from './components/ui/toaster';
 import { Toaster as Sonner } from './components/ui/sonner';
@@ -18,12 +17,10 @@ function App() {
         <Toaster />
         <Sonner />
         <ThemeProvider>
-          <BrowserRouter>
-            {/* Wrap your routes with the Layout component */}
-            <Layout>
-              <AppRoutes />
-            </Layout>
-          </BrowserRouter>
+          {/* BrowserRouter removed; HashRouter is in main.tsx */}
+          <Layout>
+            <AppRoutes />
+          </Layout>
         </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
