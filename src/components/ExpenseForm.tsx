@@ -16,6 +16,8 @@ import { Plus, Calculator } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCurrency } from '@/hooks/useCurrency';
 import { categories } from '@/lib/categories';
+import { evaluate } from 'mathjs';
+
 
 interface ExpenseFormData {
   date: string;
@@ -63,24 +65,32 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleCalcInput = (char: string) => {
-    if (char === '=') {
-      try {
-        const result = eval(calcExpression || formData.amount.toString());
-        handleInputChange('amount', parseFloat(result.toString()));
-        setCalcExpression('');
-        setIsCalculatorOpen(false);
-      } catch {
-        toast({ title: t('error') || 'Error', description: t('invalidCalculation') || 'Invalid calculation', variant: 'destructive' });
-      }
-    } else if (char === 'C') {
+
+const handleCalcInput = (char: string) => {
+  if (char === '=') {
+    try {
+      // Use mathjs to safely evaluate the expression
+      const expression = calcExpression || formData.amount.toString();
+      const result = evaluate(expression);
+
+      handleInputChange('amount', parseFloat(result.toString()));
       setCalcExpression('');
-    } else if (char === 'DEL') {
-      setCalcExpression(prev => prev.slice(0, -1));
-    } else {
-      setCalcExpression(prev => prev + char);
+      setIsCalculatorOpen(false);
+    } catch {
+      toast({
+        title: t('error') || 'Error',
+        description: t('invalidCalculation') || 'Invalid calculation',
+        variant: 'destructive',
+      });
     }
-  };
+  } else if (char === 'C') {
+    setCalcExpression('');
+  } else if (char === 'DEL') {
+    setCalcExpression(prev => prev.slice(0, -1));
+  } else {
+    setCalcExpression(prev => prev + char);
+  }
+};
 
   useEffect(() => {
     if (!isCalculatorOpen) return;
