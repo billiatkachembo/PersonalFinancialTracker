@@ -31,18 +31,64 @@
     <meta property="og:url" content="https://billiatkachembo.github.io/PersonalFinancialTracker/" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#2F855A" />
-    <script type="module" crossorigin src="/PersonalFinancialTracker/assets/index-D51pUXQL.js"></script>
-    <link rel="stylesheet" crossorigin href="/PersonalFinancialTracker/assets/index-B9DzYl95.css">
+    <script type="module" crossorigin src="/PersonalFinancialTracker/assets/index-DKovksyX.js"></script>
+    <link rel="stylesheet" crossorigin href="/PersonalFinancialTracker/assets/index-ClwtJCkV.css">
   <link rel="manifest" href="/PersonalFinancialTracker/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/PersonalFinancialTracker/registerSW.js"></script></head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="loading-container" style="background-color: hsl(var(--background)); color: hsl(var(--foreground));">
+        <div class="loading-spinner" style="border-top-color: hsl(var(--primary));"></div>
+        <div class="loading-text">Money Manager</div>
+        <div class="loading-subtext">Loading your financial tracker...</div>
+      </div>
+    </div>
+
+
+    <script>
+      // App load flag
+      window.__APP_LOADED__ = false;
+
+      // Fallback if loading fails
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          if (!window.__APP_LOADED__) {
+            const root = document.getElementById('root');
+            if (root) {
+              root.innerHTML = `
+                <div class="loading-container" style="background-color: hsl(var(--background)); color: hsl(var(--foreground));">
+                  <h2>Loading Taking Too Long</h2>
+                  <p>The application is taking longer than expected to load.</p>
+                  <p>This might be due to Content Security Policy restrictions.</p>
+                  <button onclick="window.location.reload()" style="
+                    background: hsl(var(--primary));
+                    color: hsl(var(--primary-foreground));
+                    border: none;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 0.5rem;
+                    cursor: pointer;
+                    font-weight: 600;
+                    margin-top: 1rem;
+                  ">Refresh Page</button>
+                </div>
+              `;
+            }
+          }
+        }, 5000);
+      });
+
+      // Log CSP violations
+      document.addEventListener('securitypolicyviolation', (e) => {
+        console.warn('CSP Violation:', e);
+      });
+    </script>
+
     <style>
       body {
         margin: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-        background: linear-gradient(135deg, #2F855A 0%, #1e5c3d 100%);
-        color: white;
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
         min-height: 100vh;
       }
       .loading-container {
@@ -59,7 +105,7 @@
         width: 48px;
         height: 48px;
         border: 4px solid rgba(255, 255, 255, 0.3);
-        border-top: 4px solid white;
+        border-top: 4px solid hsl(var(--primary));
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
@@ -76,47 +122,5 @@
         margin-top: 0.5rem;
       }
     </style>
-  </head>
-
-  <body>
-    <div id="root"></div>
-
-    <script>
-      // App load flag
-      window.__APP_LOADED__ = false;
-
-      // Fallback if loading fails
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          if (!window.__APP_LOADED__) {
-            const root = document.getElementById('root');
-            if (root) {
-              root.innerHTML = `
-                <div class="loading-container">
-                  <h2>Loading Taking Too Long</h2>
-                  <p>The application is taking longer than expected to load.</p>
-                  <p>This might be due to Content Security Policy restrictions.</p>
-                  <button onclick="window.location.reload()" style="
-                    background: white;
-                    color: #2F855A;
-                    border: none;
-                    padding: 0.75rem 1.5rem;
-                    border-radius: 0.5rem;
-                    cursor: pointer;
-                    font-weight: 600;
-                    margin-top: 1rem;
-                  ">Refresh Page</button>
-                </div>
-              `;
-            }
-          }
-        }, 5000); // wait 5 seconds before fallback
-      });
-
-      // Log CSP violations
-      document.addEventListener('securitypolicyviolation', (e) => {
-        console.warn('CSP Violation:', e);
-      });
-    </script>
   </body>
 </html>
