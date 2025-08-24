@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 
-    <!-- Manifest & Favicon -->
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" href="favicon.jpeg" />
-
+    <!-- These will be handled correctly by Vite during build -->
+    <link rel="manifest" href="/PersonalFinancialTracker/manifest.json" />
+    <link rel="icon" type="image/x-icon" href="/PersonalFinancialTracker/favicon.ico" />
+    
     <title>Money Manager</title>
     <meta name="description" content="Billiat Kachembo" />
     <meta name="author" content="Billiat Kachembo" />
@@ -20,16 +20,14 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- Optional: Add theme color for mobile browsers -->
+    <!-- Theme color for mobile browsers -->
     <meta name="theme-color" content="#2F855A" />
-    <script type="module" crossorigin src="/PersonalFinancialTracker/assets/index-DV305Tf_.js"></script>
-    <link rel="modulepreload" crossorigin href="/PersonalFinancialTracker/assets/vendor-Bs1Z6TJU.js">
-    <link rel="stylesheet" crossorigin href="/PersonalFinancialTracker/assets/index-Y5Ys9BsT.css">
   <link rel="manifest" href="/PersonalFinancialTracker/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/PersonalFinancialTracker/registerSW.js"></script></head>
 
   <body>
     <div id="root"></div>
 
-    <!-- Vite will rewrite this path during build -->
+    <!-- Vite will handle this during build - do not include manually -->
+    <!-- The built script will be injected here automatically -->
   </body>
 </html>
