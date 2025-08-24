@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Add headers for CSP in development
+    headers: mode === 'development' ? {
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;"
+    } : {}
   },
   plugins: [
     react(),
@@ -16,7 +20,7 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,json}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
       includeAssets: ['favicon.ico'],
       manifest: {
@@ -42,7 +46,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "src"),
     },
   },
-  base: "/PersonalFinancialTracker/", // required for GitHub Pages
+  base: "/PersonalFinancialTracker/",
   build: {
     outDir: 'dist',
     chunkSizeWarningLimit: 5000,

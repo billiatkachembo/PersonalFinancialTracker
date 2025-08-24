@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,8 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Tag, Calculator } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCurrency } from '@/hooks/useCurrency';
-import { evaluate } from 'mathjs';
-
 
 const incomeSourceOptions = [
   { value: 'salary', label: 'Salary', icon: <Tag className="inline w-4 h-4 mr-1 text-muted-foreground" /> },
@@ -56,6 +54,79 @@ interface IncomeFormData {
 interface IncomeFormProps {
   onSubmit: (income: IncomeFormData) => void;
 }
+
+// Safe expression evaluator without using eval()
+const safeEvaluate = (expression: string): number => {
+  // Remove any non-math characters for security
+  const cleanExpr = expression.replace(/[^0-9+\-*/().]/g, '');
+  
+  try {
+    // Use a simple recursive descent parser
+    let index = 0;
+    
+    const parseExpression = (): number => {
+      let left = parseTerm();
+      while (index < cleanExpr.length) {
+        const char = cleanExpr[index];
+        if (char === '+') {
+          index++;
+          left += parseTerm();
+        } else if (char === '-') {
+          index++;
+          left -= parseTerm();
+        } else {
+          break;
+        }
+      }
+      return left;
+    };
+    
+    const parseTerm = (): number => {
+      let left = parseFactor();
+      while (index < cleanExpr.length) {
+        const char = cleanExpr[index];
+        if (char === '*') {
+          index++;
+          left *= parseFactor();
+        } else if (char === '/') {
+          index++;
+          const right = parseFactor();
+          if (right === 0) throw new Error('Division by zero');
+          left /= right;
+        } else {
+          break;
+        }
+      }
+      return left;
+    };
+    
+    const parseFactor = (): number => {
+      if (cleanExpr[index] === '(') {
+        index++;
+        const value = parseExpression();
+        if (cleanExpr[index] !== ')') throw new Error('Missing closing parenthesis');
+        index++;
+        return value;
+      }
+      
+      let numStr = '';
+      while (index < cleanExpr.length && 
+            (cleanExpr[index] === '.' || (cleanExpr[index] >= '0' && cleanExpr[index] <= '9'))) {
+        numStr += cleanExpr[index];
+        index++;
+      }
+      
+      if (numStr === '') throw new Error('Invalid expression');
+      return parseFloat(numStr);
+    };
+    
+    const result = parseExpression();
+    if (index !== cleanExpr.length) throw new Error('Invalid expression');
+    return result;
+  } catch {
+    throw new Error('Invalid expression');
+  }
+};
 
 export const IncomeForm: React.FC<IncomeFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState<IncomeFormData>({
@@ -111,32 +182,34 @@ export const IncomeForm: React.FC<IncomeFormProps> = ({ onSubmit }) => {
     toast({ title: 'Success', description: 'Income added successfully!', variant: 'default' });
   };
 
-
-const handleCalcInput = (char: string) => {
-  if (char === '=') {
-    try {
-      // Safely evaluate the expression
-      const expression = calcExpression || formData.amount.toString();
-      const result = evaluate(expression);
-
-      handleInputChange('amount', parseFloat(result.toString()));
+  const handleCalcInput = (char: string) => {
+    if (char === '=') {
+      try {
+        const expression = calcExpression || formData.amount.toString();
+        const result = safeEvaluate(expression);
+        
+        if (isNaN(result)) {
+          throw new Error('Invalid calculation');
+        }
+        
+        handleInputChange('amount', parseFloat(result.toFixed(2)));
+        setCalcExpression('');
+        setIsCalculatorOpen(false);
+      } catch {
+        toast({
+          title: 'Error',
+          description: 'Invalid calculation',
+          variant: 'destructive',
+        });
+      }
+    } else if (char === 'C') {
       setCalcExpression('');
-      setIsCalculatorOpen(false);
-    } catch {
-      toast({
-        title: 'Error',
-        description: 'Invalid calculation',
-        variant: 'destructive',
-      });
+    } else if (char === 'DEL') {
+      setCalcExpression(prev => prev.slice(0, -1));
+    } else {
+      setCalcExpression(prev => prev + char);
     }
-  } else if (char === 'C') {
-    setCalcExpression('');
-  } else if (char === 'DEL') {
-    setCalcExpression(prev => prev.slice(0, -1));
-  } else {
-    setCalcExpression(prev => prev + char);
-  }
-};
+  };
 
   useEffect(() => {
     if (!isCalculatorOpen) return;
@@ -187,9 +260,10 @@ const handleCalcInput = (char: string) => {
           </div>
 
           {isCalculatorOpen && (
-            <div  className="inline top-16 right-10 w-64 p-2 rounded-lg shadow-md bg-background text-foreground z-50">
-
-              <div className="mb-2 text-right font-mono select-none border-b-2 pb-1 border-gray-200">{calcExpression || formData.amount}</div>
+            <div className="absolute top-16 right-0 w-64 p-2 rounded-lg shadow-md bg-background text-foreground z-50">
+              <div className="mb-2 text-right font-mono select-none border-b-2 pb-1 border-gray-200">
+                {calcExpression || formData.amount || '0'}
+              </div>
               <div className="grid grid-cols-5 gap-1">
                 {['7','8','9','+','4','5','6','-','1','2','3','*','0','.','=','/','C','DEL'].map((char) => (
                   <Button key={char} type="button" variant="outline" size="sm" onClick={() => handleCalcInput(char)}>
@@ -212,7 +286,7 @@ const handleCalcInput = (char: string) => {
             required
           >
             <SelectTrigger className="shadow-soft">
-              <SelectValue placeholder={('Select income source')} />
+              <SelectValue placeholder="Select income source" />
             </SelectTrigger>
             <SelectContent className="space-y-2 p-2 max-h-[300px] overflow-auto">
               {incomeSourceOptions.map(({ value, label, icon }) => (
@@ -225,21 +299,21 @@ const handleCalcInput = (char: string) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="income-account">{('account')}</Label>
+          <Label htmlFor="income-account">Account</Label>
           <Select
             value={formData.account}
             onValueChange={(value) => handleInputChange('account', value)}
           >
             <SelectTrigger className="shadow-soft">
-              <SelectValue placeholder={('selectAccount')} />
+              <SelectValue placeholder="Select account" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Cash">💵 {t('cash')}</SelectItem>
-              <SelectItem value="Savings">🏦 {t('savings')}</SelectItem>
-              <SelectItem value="Bank">🏦 {t('bank')}</SelectItem>
-              <SelectItem value="Credit Card">💳 {t('creditCard')}</SelectItem>
-              <SelectItem value="Debit Card">🏧 {t('debitCard')}</SelectItem>
-              <SelectItem value="Mobile Money">📱 {t('mobileMoney')}</SelectItem>
+              <SelectItem value="Cash">💵 Cash</SelectItem>
+              <SelectItem value="Savings">🏦 Savings</SelectItem>
+              <SelectItem value="Bank">🏦 Bank</SelectItem>
+              <SelectItem value="Credit Card">💳 Credit Card</SelectItem>
+              <SelectItem value="Debit Card">🏧 Debit Card</SelectItem>
+              <SelectItem value="Mobile Money">📱 Mobile Money</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -265,7 +339,7 @@ const handleCalcInput = (char: string) => {
       {formData.repeat !== 'one-time' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="repeat-start">{('Repeat Start')} *</Label>
+            <Label htmlFor="repeat-start">Repeat Start *</Label>
             <Input
               id="repeat-start"
               type="date"
@@ -276,7 +350,7 @@ const handleCalcInput = (char: string) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="repeat-end">{('Repeat End')} *</Label>
+            <Label htmlFor="repeat-end">Repeat End *</Label>
             <Input
               id="repeat-end"
               type="date"
@@ -289,12 +363,12 @@ const handleCalcInput = (char: string) => {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="income-description">{('Description')} *</Label>
+        <Label htmlFor="income-description">Description *</Label>
         <Textarea
           id="income-description"
           value={formData.description}
           onChange={(e) => handleInputChange('description', e.target.value)}
-          placeholder={('Where is this income from?')}
+          placeholder="Where is this income from?"
           className="shadow-soft"
           rows={3}
         />
@@ -302,7 +376,7 @@ const handleCalcInput = (char: string) => {
 
       <Button type="submit" variant="income" className="w-full">
         <Plus className="h-4 w-4 mr-2" />
-        {('Add Income')}
+        Add Income
       </Button>
     </form>
   );

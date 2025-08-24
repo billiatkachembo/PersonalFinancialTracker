@@ -16,8 +16,6 @@ import { Plus, Calculator } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCurrency } from '@/hooks/useCurrency';
 import { categories } from '@/lib/categories';
-import { evaluate } from 'mathjs';
-
 
 interface ExpenseFormData {
   date: string;
@@ -33,6 +31,21 @@ interface ExpenseFormData {
 interface ExpenseFormProps {
   onSubmit: (expense: ExpenseFormData) => void;
 }
+
+// Safe expression evaluator without using eval()
+const safeEvaluate = (expression: string): number => {
+  // Remove any non-math characters for security
+  const cleanExpr = expression.replace(/[^0-9+\-*/().]/g, '');
+  
+  try {
+    // Use Function constructor as a safer alternative to eval
+    // Note: This still might be blocked by very strict CSP policies
+    // In a real production app, consider a server-side evaluation
+    return new Function(`return ${cleanExpr}`)() as number;
+  } catch {
+    throw new Error('Invalid expression');
+  }
+};
 
 export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState<ExpenseFormData>({
@@ -65,32 +78,34 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-
-const handleCalcInput = (char: string) => {
-  if (char === '=') {
-    try {
-      // Use mathjs to safely evaluate the expression
-      const expression = calcExpression || formData.amount.toString();
-      const result = evaluate(expression);
-
-      handleInputChange('amount', parseFloat(result.toString()));
+  const handleCalcInput = (char: string) => {
+    if (char === '=') {
+      try {
+        const expression = calcExpression || formData.amount.toString();
+        const result = safeEvaluate(expression);
+        
+        if (isNaN(result)) {
+          throw new Error('Invalid calculation');
+        }
+        
+        handleInputChange('amount', parseFloat(result.toFixed(2)));
+        setCalcExpression('');
+        setIsCalculatorOpen(false);
+      } catch {
+        toast({
+          title: t('error') || 'Error',
+          description: t('invalidCalculation') || 'Invalid calculation',
+          variant: 'destructive',
+        });
+      }
+    } else if (char === 'C') {
       setCalcExpression('');
-      setIsCalculatorOpen(false);
-    } catch {
-      toast({
-        title: t('error') || 'Error',
-        description: t('invalidCalculation') || 'Invalid calculation',
-        variant: 'destructive',
-      });
+    } else if (char === 'DEL') {
+      setCalcExpression(prev => prev.slice(0, -1));
+    } else {
+      setCalcExpression(prev => prev + char);
     }
-  } else if (char === 'C') {
-    setCalcExpression('');
-  } else if (char === 'DEL') {
-    setCalcExpression(prev => prev.slice(0, -1));
-  } else {
-    setCalcExpression(prev => prev + char);
-  }
-};
+  };
 
   useEffect(() => {
     if (!isCalculatorOpen) return;
@@ -196,24 +211,22 @@ const handleCalcInput = (char: string) => {
             </Button>
           </div>
 
-        {isCalculatorOpen && (
-  <div  className="inline top-16 right-10 w-64 p-2 rounded-lg shadow-md bg-background text-foreground z-50">
-
+          {isCalculatorOpen && (
+            <div className="absolute top-16 right-0 w-64 p-2 rounded-lg shadow-md bg-background text-foreground z-50">
               <div className="mb-2 text-right font-mono select-none border-b-2 pb-1 border-gray-200">
-      {calcExpression || formData.amount || '0'}
-    </div>
-    <div className="grid grid-cols-5 gap-1">
-      {['7','8','9','+','4','5','6','-','1','2','3','*','0','.','=','/','C','DEL'].map((char) => (
-        <Button key={char} type="button" variant="outline" size="sm" onClick={() => handleCalcInput(char)}>
-          {char}
-        </Button>
-      ))}
-    </div>
-  </div>
-)}
-</div>
-</div>
-
+                {calcExpression || formData.amount || '0'}
+              </div>
+              <div className="grid grid-cols-5 gap-1">
+                {['7','8','9','+','4','5','6','-','1','2','3','*','0','.','=','/','C','DEL'].map((char) => (
+                  <Button key={char} type="button" variant="outline" size="sm" onClick={() => handleCalcInput(char)}>
+                    {char}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       {/* Category, Account, Repeat */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
