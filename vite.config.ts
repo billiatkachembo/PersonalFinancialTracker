@@ -14,23 +14,24 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,json}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
+      },
+      includeAssets: ['favicon.ico'],
       manifest: {
         name: 'Money Manager',
         short_name: 'MoneyManager',
-        start_url: '.',
+        description: 'Personal financial tracking application',
+        start_url: '/PersonalFinancialTracker/',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#2F855A',
         icons: [
           {
-            src: 'favicon.jpeg',
-            sizes: '192x192',
-            type: 'image/jpeg'
-          },
-          {
-            src: 'favicon.jpeg',
-            sizes: '512x512',
-            type: 'image/jpeg'
+            src: 'favicon.ico',
+            sizes: '64x64 32x32 24x24 16x16',
+            type: 'image/x-icon'
           }
         ]
       }
@@ -43,7 +44,8 @@ export default defineConfig(({ mode }) => ({
   },
   base: "/PersonalFinancialTracker/", // required for GitHub Pages
   build: {
-    chunkSizeWarningLimit: 2000,
+    outDir: 'dist',
+    chunkSizeWarningLimit: 5000,
     rollupOptions: {
       output: {
         manualChunks: {

@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 
-    <!-- Manifest & Favicon -->
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" href="favicon.jpeg" />
-
+    <!-- These will be handled correctly by Vite during build -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    
     <title>Money Manager</title>
     <meta name="description" content="Billiat Kachembo" />
     <meta name="author" content="Billiat Kachembo" />
@@ -20,14 +20,14 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- Optional: Add theme color for mobile browsers -->
+    <!-- Theme color for mobile browsers -->
     <meta name="theme-color" content="#2F855A" />
   </head>
 
   <body>
     <div id="root"></div>
 
-    <!-- Vite will rewrite this path during build -->
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Vite will handle this during build - do not include manually -->
+    <!-- The built script will be injected here automatically -->
   </body>
 </html>
