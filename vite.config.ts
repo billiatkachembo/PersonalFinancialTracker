@@ -1,21 +1,11 @@
+// vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-    // Add headers for CSP in development
-    headers: mode === 'development' ? {
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;"
-    } : {}
-  },
+export default defineConfig({
   plugins: [
     react(),
-    mode === "development" && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
@@ -40,27 +30,13 @@ export default defineConfig(({ mode }) => ({
         ]
       }
     })
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-    },
-  },
-  base: "/PersonalFinancialTracker/",
+  ],
+  base: "/PersonalFinancialTracker/", // This is critical for GitHub Pages
   build: {
     outDir: 'dist',
-    chunkSizeWarningLimit: 5000,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: [
-            "react",
-            "react-dom",
-            "@tanstack/react-query",
-            "react-router-dom",
-          ],
-        },
-      },
-    },
+    sourcemap: false,
   },
-}));
+  css: {
+      postcss: './postcss.config.js'
+    }
+});
