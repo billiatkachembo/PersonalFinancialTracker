@@ -3,7 +3,7 @@ import AppRoutes from './routes';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { TooltipProvider } from './components/ui/tooltip';
 import { ThemeProvider } from './components/ThemeProvider';
-import Layout from './components/Layout';
+import Layout from './components/Layout'; // Import the Layout component
 
 import { Toaster } from './components/ui/toaster';
 import { Toaster as Sonner } from './components/ui/sonner';
@@ -26,6 +26,5 @@ function App() {
     </QueryClientProvider>
   );
 }
-
 
 export default App;
