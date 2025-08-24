@@ -32,18 +32,90 @@ interface ExpenseFormProps {
   onSubmit: (expense: ExpenseFormData) => void;
 }
 
-// Safe expression evaluator without using eval()
-const safeEvaluate = (expression: string): number => {
-  // Remove any non-math characters for security
-  const cleanExpr = expression.replace(/[^0-9+\-*/().]/g, '');
-  
+/**
+ * A safe and secure custom function to evaluate a basic arithmetic expression
+ * without using `eval()` or `new Function()`.
+ * This approach is CSP-compliant.
+ *
+ * It works by using a regular expression to tokenize the string and then
+ * processing the operations in order of precedence.
+ */
+const safeEvaluateExpression = (expression: string): number => {
   try {
-    // Use Function constructor as a safer alternative to eval
-    // Note: This still might be blocked by very strict CSP policies
-    // In a real production app, consider a server-side evaluation
-    return new Function(`return ${cleanExpr}`)() as number;
-  } catch {
-    throw new Error('Invalid expression');
+    // Sanitize the expression to prevent code injection.
+    const sanitizedExpression = expression.replace(/[^-()\d/*+.]/g, '');
+
+    // Replace all operators with spaces for splitting, while keeping them
+    const tokens = sanitizedExpression.match(/(\d+\.?\d*)|[+\-*/()]/g);
+    if (!tokens) return NaN;
+
+    // Use a simple stack-based approach for evaluation.
+    const values: number[] = [];
+    const operators: string[] = [];
+
+    const precedence: { [key: string]: number } = {
+      '+': 1,
+      '-': 1,
+      '*': 2,
+      '/': 2,
+    };
+
+    const applyOperator = () => {
+      const operator = operators.pop();
+      const right = values.pop();
+      const left = values.pop();
+
+      if (left === undefined || right === undefined || !operator) return NaN;
+
+      switch (operator) {
+        case '+':
+          values.push(left + right);
+          break;
+        case '-':
+          values.push(left - right);
+          break;
+        case '*':
+          values.push(left * right);
+          break;
+        case '/':
+          if (right === 0) throw new Error('Division by zero');
+          values.push(left / right);
+          break;
+        default:
+          return NaN;
+      }
+    };
+
+    for (const token of tokens) {
+      if (token === '(') {
+        operators.push(token);
+      } else if (token === ')') {
+        while (operators.length > 0 && operators[operators.length - 1] !== '(') {
+          applyOperator();
+        }
+        operators.pop(); // Pop the '('
+      } else if (precedence[token]) {
+        while (
+          operators.length > 0 &&
+          precedence[operators[operators.length - 1]] >= precedence[token]
+        ) {
+          applyOperator();
+        }
+        operators.push(token);
+      } else {
+        // It's a number
+        values.push(parseFloat(token));
+      }
+    }
+
+    while (operators.length > 0) {
+      applyOperator();
+    }
+
+    return values.length === 1 ? values[0] : NaN;
+  } catch (e) {
+    console.error('Calculation error:', e);
+    return NaN;
   }
 };
 
@@ -81,10 +153,10 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
   const handleCalcInput = (char: string) => {
     if (char === '=') {
       try {
-        const expression = calcExpression || formData.amount.toString();
-        const result = safeEvaluate(expression);
+        const expressionToEvaluate = calcExpression || formData.amount.toString();
+        const result = safeEvaluateExpression(expressionToEvaluate);
         
-        if (isNaN(result)) {
+        if (isNaN(result) || !isFinite(result)) {
           throw new Error('Invalid calculation');
         }
         
@@ -118,7 +190,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [isCalculatorOpen, calcExpression]);
+  }, [isCalculatorOpen, calcExpression, handleCalcInput]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,11 +264,11 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
           <div className="flex relative">
             <Input
               id="expense-amount"
-              type="number"
-              step="0.01"
-              min="0"
+              type="text"
+              inputMode="none"
               value={calcExpression || formData.amount || ''}
-              onChange={(e) => handleInputChange('amount', parseFloat(e.target.value))}
+              readOnly
+              onClick={() => setIsCalculatorOpen(true)}
               placeholder="0.00"
               className="shadow-soft pr-10"
             />
