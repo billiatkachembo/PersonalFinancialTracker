@@ -11,3 +11,6 @@ createRoot(container).render(
     <App />
   </HashRouter>
 );
+
+// Mark app as loaded so the fallback doesn’t show
+window.__APP_LOADED__ = true;
