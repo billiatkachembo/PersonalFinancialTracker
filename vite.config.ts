@@ -17,6 +17,22 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "src"),
     },
   },
-  // 👇 this is required for GitHub Pages
-  base: "/PersonalFinancialTracker/",
+  base: "/PersonalFinancialTracker/", // required for GitHub Pages
+  build: {
+    // Increase the warning limit to 2 MB
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        // Separate vendor libraries into their own chunk
+        manualChunks: {
+          vendor: [
+            "react",
+            "react-dom",
+            "@tanstack/react-query",
+            "react-router-dom",
+          ],
+        },
+      },
+    },
+  },
 }));
