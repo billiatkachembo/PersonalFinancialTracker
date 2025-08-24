@@ -2,12 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-
-    <!-- Content Security Policy -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+    <!-- Content Security Policy (CSP) -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval';
+      script-src 'self' 'unsafe-inline';
       style-src 'self' 'unsafe-inline';
       img-src 'self' data: blob:;
       connect-src 'self';
@@ -18,26 +18,24 @@
       worker-src 'self' blob:;
     ">
 
-    <!-- PWA manifest and favicon -->
-    <link rel="manifest" href="/PersonalFinancialTracker/manifest.webmanifest" />
-    <link rel="icon" href="/PersonalFinancialTracker/favicon.ico" />
+    <!-- PWA + Icons -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="favicon.ico" />
 
     <title>Money Manager</title>
     <meta name="description" content="Personal Financial Tracker by Billiat Kachembo" />
     <meta name="author" content="Billiat Kachembo" />
-
-    <!-- Open Graph -->
     <meta property="og:title" content="Money Manager" />
     <meta property="og:description" content="Track your personal finances with this easy-to-use application" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://billiatkachembo.github.io/PersonalFinancialTracker/" />
-
-    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-
-    <!-- Theme color for mobile browsers -->
     <meta name="theme-color" content="#2F855A" />
+  </head>
 
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
     <style>
       body {
         margin: 0;
@@ -46,7 +44,6 @@
         color: white;
         min-height: 100vh;
       }
-
       .loading-container {
         display: flex;
         flex-direction: column;
@@ -57,7 +54,6 @@
         text-align: center;
         padding: 2rem;
       }
-
       .loading-spinner {
         width: 48px;
         height: 48px;
@@ -66,17 +62,14 @@
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
-
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
-
       .loading-text {
         font-size: 1.25rem;
         font-weight: 500;
       }
-
       .loading-subtext {
         opacity: 0.8;
         margin-top: 0.5rem;
@@ -94,8 +87,10 @@
     </div>
 
     <script>
+      // App load flag
       window.__APP_LOADED__ = false;
 
+      // Fallback if loading fails
       window.addEventListener('load', function() {
         setTimeout(function() {
           if (!window.__APP_LOADED__) {
@@ -120,9 +115,10 @@
               `;
             }
           }
-        }, 10000); // 10 seconds
+        }, 5000); // wait 5 seconds before fallback
       });
 
+      // Log CSP violations
       document.addEventListener('securitypolicyviolation', (e) => {
         console.warn('CSP Violation:', e);
       });
