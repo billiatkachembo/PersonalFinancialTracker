@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useMemo, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import { Transaction } from '@/types/financial';
 
 import {
   PieChart as RechartsPieChart,
@@ -9,13 +10,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  BarChart,
-  Bar,
 } from 'recharts';
 
 import {
@@ -41,12 +35,11 @@ import {
 } from '@/components/ui/select';
 
 import { Button } from '@/components/ui/button';
-import { Loader2, BarChart3, DollarSign, PieChart, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { Loader2, DollarSign, PieChart, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCurrency } from '@/hooks/useCurrency';
-import { Transaction } from './FinancialTracker';
-import { subDays, subMonths, subYears, isAfter, startOfWeek, format } from 'date-fns';
+import { subDays, subMonths, subYears, startOfWeek, format } from 'date-fns';
 
 interface AnalyticsProps {
   expenses: Transaction[];
@@ -56,6 +49,18 @@ interface AnalyticsProps {
 
 type Timeframe = 'daily' | 'week' | 'month' | '3months' | 'year' | 'all';
 type TrendView = 'monthly' | 'weekly';
+
+interface AccountOption {
+  value: string;
+  label: string;
+  icon: string;
+}
+
+interface AccountTotal extends AccountOption {
+  totalIncome: number;
+  totalExpenses: number;
+  netBalance: number;
+}
 
 const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false }) => {
   const { t } = useLanguage();
@@ -123,7 +128,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
   );
 
   const groupByCategory = (transactions: Transaction[]) => {
-    return transactions.reduce((acc, tx) => {
+    return transactions.reduce((acc: Record<string, number>, tx) => {
       acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
       return acc;
     }, {} as Record<string, number>);
@@ -139,7 +144,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
     .sort(([, a], [, b]) => b - a);
 
   const monthlyTotals = useMemo(() => {
-    return [...filteredIncome, ...filteredExpenses].reduce((acc, tx) => {
+    return [...filteredIncome, ...filteredExpenses].reduce((acc: Record<string, { income: number; expenses: number }>, tx) => {
       const month = tx.date.slice(0, 7);
       if (!acc[month]) acc[month] = { income: 0, expenses: 0 };
       if (tx.type === 'expense') acc[month].expenses += tx.amount;
@@ -157,7 +162,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
       return `${dt.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
     };
 
-    return [...filteredIncome, ...filteredExpenses].reduce((acc, tx) => {
+    return [...filteredIncome, ...filteredExpenses].reduce((acc: Record<string, { income: number; expenses: number }>, tx) => {
       const week = getWeekKey(tx.date);
       if (!acc[week]) acc[week] = { income: 0, expenses: 0 };
       if (tx.type === 'expense') acc[week].expenses += tx.amount;
@@ -209,16 +214,16 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
     document.body.removeChild(link);
   };
   
-  const accountOptions = [
-    { value: 'Cash', label: ('Cash'), icon: '💵' },
-    { value: 'Bank', label: ('Bank'), icon: '🏦' },
-    { value: 'Credit Card', label: ('Credit Card'), icon: '💳' },
-    { value: 'Debit Card', label: ('Debit Card'), icon: '🏧' },
-    { value: 'Mobile Money', label: ('Mobile Money'), icon: '📱' },
-    { value: 'Savings', label: ('Savings'), icon: '💰' },
+  const accountOptions: AccountOption[] = [
+    { value: 'Cash', label: 'Cash', icon: '💵' },
+    { value: 'Bank', label: 'Bank', icon: '🏦' },
+    { value: 'Credit Card', label: 'Credit Card', icon: '💳' },
+    { value: 'Debit Card', label: 'Debit Card', icon: '🏧' },
+    { value: 'Mobile Money', label: 'Mobile Money', icon: '📱' },
+    { value: 'Savings', label: 'Savings', icon: '💰' },
   ];
 
-  const accountTotals = useMemo(() => {
+  const accountTotals = useMemo((): AccountTotal[] => {
     return accountOptions.map(account => {
       const totalIncome = filteredIncome
         .filter(i => i.account === account.value)
@@ -300,9 +305,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
 
       <Tabs defaultValue="charts">
         <TabsList className="grid grid-cols-2 md:grid-cols-3 w-full mx-auto">
-          <TabsTrigger value="charts">{('Charts')}</TabsTrigger>
-          <TabsTrigger value="trends">{('Trends')}</TabsTrigger>
-          <TabsTrigger value="accounts">{('Accounts')}</TabsTrigger>
+          <TabsTrigger value="charts">{'Charts'}</TabsTrigger>
+          <TabsTrigger value="trends">{'Trends'}</TabsTrigger>
+          <TabsTrigger value="accounts">{'Accounts'}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="charts">
@@ -336,7 +341,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
             <Card className="shadow-large bg-gradient-primary text-primary-foreground">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t('netBalance')}</CardTitle>
-                <BarChart3 className="h-4 w-4" />
+                <TrendingUp className="h-4 w-4" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatCurrency(totalIncome - totalExpenses)}</div>
@@ -370,7 +375,12 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
                           <Cell key={idx} fill={EXPENSE_COLORS[idx % EXPENSE_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      <Tooltip formatter={(value: unknown) => {
+                        if (typeof value === 'number') {
+                          return formatCurrency(value);
+                        }
+                        return String(value);
+                      }} />
                       <Legend />
                     </RechartsPieChart>
                   </ResponsiveContainer>
@@ -404,7 +414,12 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
                           <Cell key={idx} fill={INCOME_COLORS[idx % INCOME_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      <Tooltip formatter={(value: unknown) => {
+                        if (typeof value === 'number') {
+                          return formatCurrency(value);
+                        }
+                        return String(value);
+                      }} />
                       <Legend />
                     </RechartsPieChart>
                   </ResponsiveContainer>
@@ -517,7 +532,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
             <Card className="shadow-soft mt-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
+                  <TrendingUp className="h-5 w-5" />
                   {trendView === 'monthly' ? t('monthlyTrends') : t('weeklyTrends')}
                 </CardTitle>
               </CardHeader>
@@ -586,7 +601,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Wallet className="h-5 w-5" />
-                {t('Account Balances') || 'Account Balances'}
+                {'Account Balances'}
               </CardTitle>
               <Button size="sm" variant="outline" onClick={exportAccountsCSV}>
                 {t('exportData') || 'Export Data'}
@@ -612,7 +627,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
                           <div className="text-right">
                             <div className={`text-xl font-bold ${valueColor}`}>{formatCurrency(netBalance)}</div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              {isPositive ? t('Surplus') : t('Deficit')}
+                              {isPositive ? 'Surplus' : 'Deficit'}
                             </div>
                           </div>
                         </div>
@@ -645,7 +660,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ expenses, income, loading = false
                 </div>
               ) : (
                 <p className="text-muted-foreground text-center py-4">
-                  {t('noAccountData') || 'No account data available'}
+                  {'No account data available'}
                 </p>
               )}
             </CardContent>

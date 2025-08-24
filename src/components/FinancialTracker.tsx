@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/FinancialTracker.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import {
   Card,
   CardContent,
@@ -32,61 +32,91 @@ import {
   TrendingUp,
   ChevronDown,
   Repeat2
-} from 'lucide-react';
+
+}
+ 
+from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { TransferForm } from './TransferForm';
-import { ExpenseForm } from './ExpenseForm';
-import { IncomeForm } from './IncomeForm';
-import { ExpenseList } from './ExpenseList';
-import { IncomeList } from './IncomeList';
-import { FinancialCalendar } from './FinancialCalendar';
-import Analytics from './Analytics';
-import { SearchExpenses } from './SearchExpenses';
-import { Notes } from './Notes';
-import { PasscodeManager } from './PasscodeManager';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCurrency } from '@/hooks/useCurrency';
 import ThemeToggle from './ThemeToggle';
 import { LanguageCurrencySelector } from './LanguageCurrencySelector';
 import { BiMoneyWithdraw, BiTrendingDown } from 'react-icons/bi';
-import Profile from '@/pages/Profile';
+import { Transaction, TransferData } from '@/types/financial';
+import Spinner from './Spinner';
 
+// Lazy load heavy components
+// Replace the lazy imports with this corrected version:
+const TransferForm = lazy(() => import('./TransferForm').then(module => ({ default: module.TransferForm })));
+const ExpenseForm = lazy(() => import('./ExpenseForm').then(module => ({ default: module.ExpenseForm })));
+const IncomeForm = lazy(() => import('./IncomeForm').then(module => ({ default: module.IncomeForm })));
+const ExpenseList = lazy(() => import('./ExpenseList').then(module => ({ default: module.ExpenseList })));
+const IncomeList = lazy(() => import('./IncomeList').then(module => ({ default: module.IncomeList })));
+const FinancialCalendar = lazy(() => import('./FinancialCalendar').then(module => ({ default: module.FinancialCalendar })));
 
-export interface Transaction {
-  id: string;
-  date: string;
-  amount: number;
-  category: string;
-  description: string;
-  account?: string;
-  type: 'expense' | 'income';
-}
-
+// In FinancialTracker.tsx - change the import to:
+const Analytics = lazy(() => import('./Analytics'));
+const SearchExpenses = lazy(() => import('./SearchExpenses').then(module => ({ default: module.SearchExpenses })));
+const Notes = lazy(() => import('./Notes').then(module => ({ default: module.Notes })));
+const PasscodeManager = lazy(() => import('./PasscodeManager').then(module => ({ default: module.PasscodeManager })));
+// In FinancialTracker.tsx
+const Profile = lazy(() => import('@/pages/Profile'));
 const FinancialTracker = () => {
   const [expenses, setExpenses] = useState<Transaction[]>([]);
   const [income, setIncome] = useState<Transaction[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [isLocked, setIsLocked] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useLanguage();
   const { formatAmount } = useCurrency();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Load data from localStorage on mount
+  // Memoized calculations
+  const totalExpenses = useMemo(() => 
+    expenses.reduce((sum, expense) => sum + expense.amount, 0), 
+    [expenses]
+  );
+
+  const totalIncome = useMemo(() => 
+    income.reduce((sum, inc) => sum + inc.amount, 0), 
+    [income]
+  );
+
+  const netBalance = useMemo(() => totalIncome - totalExpenses, 
+    [totalIncome, totalExpenses]
+  );
+
+  // Load data from localStorage on mount with error handling
   useEffect(() => {
-    const savedExpenses = localStorage.getItem('expenses');
-    const savedIncome = localStorage.getItem('income');
-    if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
-    if (savedIncome) setIncome(JSON.parse(savedIncome));
+    try {
+      const savedExpenses = localStorage.getItem('expenses');
+      const savedIncome = localStorage.getItem('income');
+      
+      if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
+      if (savedIncome) setIncome(JSON.parse(savedIncome));
+    } catch (error) {
+      console.error('Failed to load data from localStorage:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  // Save data on changes
+  // Save data on changes with error handling
+  const saveToLocalStorage = (key: string, data: any) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+      console.error(`Failed to save ${key} to localStorage:`, error);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('expenses', JSON.stringify(expenses));
+    saveToLocalStorage('expenses', expenses);
   }, [expenses]);
 
   useEffect(() => {
-    localStorage.setItem('income', JSON.stringify(income));
+    saveToLocalStorage('income', income);
   }, [income]);
 
   // Passcode lock check on load
@@ -134,13 +164,13 @@ const FinancialTracker = () => {
     );
   };
   
-  // New function to handle transfers
-  const handleTransfer = (transferData: any) => {
+  // Type-safe transfer handler
+  const handleTransfer = (transferData: TransferData) => {
     // Add the transfer as an expense
     const expenseTransaction: Omit<Transaction, 'id' | 'type'> = {
       date: transferData.date,
       amount: transferData.amount,
-      category: 'Transfer', // A transfer from one account is an expense from that account
+      category: 'Transfer',
       description: `Transfer to ${transferData.toAccount}: ${transferData.description}`,
       account: transferData.fromAccount,
     };
@@ -150,19 +180,22 @@ const FinancialTracker = () => {
     const incomeTransaction: Omit<Transaction, 'id' | 'type'> = {
       date: transferData.date,
       amount: transferData.amount,
-      category: 'Transfer', // A transfer to another account is income for that account
+      category: 'Transfer',
       description: `Transfer from ${transferData.fromAccount}: ${transferData.description}`,
       account: transferData.toAccount,
     };
     addIncome(incomeTransaction);
   };
 
-  // Calculate totals and net balance here, so they are in scope for renderContent
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const totalIncome = income.reduce((sum, inc) => sum + inc.amount, 0);
-  const netBalance = totalIncome - totalExpenses;
-
   const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center items-center min-h-64">
+          <Spinner />
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'overview':
         return (
@@ -219,8 +252,9 @@ const FinancialTracker = () => {
                   <CardDescription>{t('latestIncome')}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {/* The showActions prop is set to true to display the delete buttons */}
-                  <IncomeList income={income.slice(0, 5)} onDelete={deleteIncome} showActions={true} />
+                  <Suspense fallback={<Spinner />}>
+                    <IncomeList income={income.slice(0, 5)} onDelete={deleteIncome} showActions={true} />
+                  </Suspense>
                 </CardContent>
               </Card>
 
@@ -230,8 +264,9 @@ const FinancialTracker = () => {
                   <CardDescription>{t('latestExpenses')}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {/* The showActions prop is set to true to display the delete buttons */}
-                  <ExpenseList expenses={expenses.slice(0, 5)} onDelete={deleteExpense} showActions={true} />
+                  <Suspense fallback={<Spinner />}>
+                    <ExpenseList expenses={expenses.slice(0, 5)} onDelete={deleteExpense} showActions={true} />
+                  </Suspense>
                 </CardContent>
               </Card>
             </div>
@@ -245,7 +280,9 @@ const FinancialTracker = () => {
               <CardDescription>{t('recordIncome')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <IncomeForm onSubmit={addIncome} />
+              <Suspense fallback={<Spinner />}>
+                <IncomeForm onSubmit={addIncome} />
+              </Suspense>
             </CardContent>
           </Card>
         );
@@ -257,7 +294,9 @@ const FinancialTracker = () => {
               <CardDescription>{t('trackSpending')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ExpenseForm onSubmit={addExpense} />
+              <Suspense fallback={<Spinner />}>
+                <ExpenseForm onSubmit={addExpense} />
+              </Suspense>
             </CardContent>
           </Card>
         );
@@ -265,11 +304,13 @@ const FinancialTracker = () => {
         return (
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle className="text-primary">{('Transfer Funds')}</CardTitle>
-              <CardDescription>{('Move Money Between Accounts')}</CardDescription>
+              <CardTitle className="text-primary">Transfer Funds</CardTitle>
+              <CardDescription>Move Money Between Accounts</CardDescription>
             </CardHeader>
             <CardContent>
-              <TransferForm onSubmit={handleTransfer} />
+              <Suspense fallback={<Spinner />}>
+                <TransferForm onSubmit={handleTransfer} />
+              </Suspense>
             </CardContent>
           </Card>
         );
@@ -281,14 +322,16 @@ const FinancialTracker = () => {
               <CardDescription>{t('viewTransactionsByDate')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <FinancialCalendar
-                expenses={expenses}
-                income={income}
-                onUpdateExpense={updateExpense}
-                onUpdateIncome={updateIncome}
-                onDeleteExpense={deleteExpense}
-                onDeleteIncome={deleteIncome}
-              />
+              <Suspense fallback={<Spinner />}>
+                <FinancialCalendar
+                  expenses={expenses}
+                  income={income}
+                  onUpdateExpense={updateExpense}
+                  onUpdateIncome={updateIncome}
+                  onDeleteExpense={deleteExpense}
+                  onDeleteIncome={deleteIncome}
+                />
+              </Suspense>
             </CardContent>
           </Card>
         );
@@ -300,7 +343,9 @@ const FinancialTracker = () => {
               <CardDescription>{t('viewInsightsAndTrends')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Analytics expenses={expenses} income={income} />
+              <Suspense fallback={<Spinner />}>
+                <Analytics expenses={expenses} income={income} />
+              </Suspense>
             </CardContent>
           </Card>
         );
@@ -312,12 +357,14 @@ const FinancialTracker = () => {
               <CardDescription>{t('findAndFilterTransactions')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <SearchExpenses
-                expenses={expenses}
-                income={income}
-                onDeleteExpense={deleteExpense}
-                onDeleteIncome={deleteIncome}
-              />
+              <Suspense fallback={<Spinner />}>
+                <SearchExpenses
+                  expenses={expenses}
+                  income={income}
+                  onDeleteExpense={deleteExpense}
+                  onDeleteIncome={deleteIncome}
+                />
+              </Suspense>
             </CardContent>
           </Card>
         );
@@ -332,12 +379,18 @@ const FinancialTracker = () => {
               <CardDescription>{t('keepTrackOfFinancialNotes')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Notes />
+              <Suspense fallback={<Spinner />}>
+                <Notes />
+              </Suspense>
             </CardContent>
           </Card>
         );
-case 'profile':
-  return <Profile onUnlock={() => setIsLocked(false)} />;
+      case 'profile':
+        return (
+          <Suspense fallback={<Spinner />}>
+            <Profile onUnlock={() => setIsLocked(false)} />
+          </Suspense>
+        );
       default:
         return null;
     }
@@ -346,7 +399,9 @@ case 'profile':
   if (isLocked) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
-        <PasscodeManager onUnlock={() => setIsLocked(false)} />
+        <Suspense fallback={<Spinner />}>
+          <PasscodeManager onUnlock={() => setIsLocked(false)} />
+        </Suspense>
       </div>
     );
   }
@@ -368,6 +423,8 @@ case 'profile':
                       activeTab === 'overview' ? 'bg-accent text-accent-foreground' : ''
                     }`}
                     onClick={() => setActiveTab('overview')}
+                    aria-label="View financial overview"
+                    aria-current={activeTab === 'overview' ? 'page' : undefined}
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     {t('overview')}
@@ -385,6 +442,7 @@ case 'profile':
                         <NavigationMenuLink
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
                           onClick={() => setActiveTab('add-income')}
+                          aria-label="Add income"
                         >
                           <div className="text-sm font-medium leading-none">{t('addIncome')}</div>
                           <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
@@ -396,6 +454,7 @@ case 'profile':
                         <NavigationMenuLink
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
                           onClick={() => setActiveTab('add-expense')}
+                          aria-label="Add expense"
                         >
                           <div className="text-sm font-medium leading-none">{t('addExpense')}</div>
                           <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
@@ -407,10 +466,11 @@ case 'profile':
                         <NavigationMenuLink
                           className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
                           onClick={() => setActiveTab('transfer')}
+                          aria-label="Transfer funds"
                         >
-                          <div className="text-sm font-medium leading-none">{('Transfer Funds')}</div>
+                          <div className="text-sm font-medium leading-none">Transfer Funds</div>
                           <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                            {('Move Money Between Accounts')}
+                            Move Money Between Accounts
                           </p>
                         </NavigationMenuLink>
                       </li>
@@ -424,6 +484,8 @@ case 'profile':
                       activeTab === 'calendar' ? 'bg-accent text-accent-foreground' : ''
                     }`}
                     onClick={() => setActiveTab('calendar')}
+                    aria-label="View calendar"
+                    aria-current={activeTab === 'calendar' ? 'page' : undefined}
                   >
                     <Calendar className="h-4 w-4 mr-2" />
                     {t('calendar')}
@@ -436,6 +498,8 @@ case 'profile':
                       activeTab === 'analytics' ? 'bg-accent text-accent-foreground' : ''
                     }`}
                     onClick={() => setActiveTab('analytics')}
+                    aria-label="View analytics"
+                    aria-current={activeTab === 'analytics' ? 'page' : undefined}
                   >
                     <BarChart3 className="h-4 w-4 mr-2" />
                     {t('analytics')}
@@ -448,6 +512,8 @@ case 'profile':
                       activeTab === 'search' ? 'bg-accent text-accent-foreground' : ''
                     }`}
                     onClick={() => setActiveTab('search')}
+                    aria-label="Search transactions"
+                    aria-current={activeTab === 'search' ? 'page' : undefined}
                   >
                     <Search className="h-4 w-4 mr-2" />
                     {t('search')}
@@ -460,6 +526,8 @@ case 'profile':
                       activeTab === 'notes' ? 'bg-accent text-accent-foreground' : ''
                     }`}
                     onClick={() => setActiveTab('notes')}
+                    aria-label="View notes"
+                    aria-current={activeTab === 'notes' ? 'page' : undefined}
                   >
                     <StickyNote className="h-4 w-4 mr-2" />
                     {t('notes')}
@@ -472,6 +540,8 @@ case 'profile':
                       activeTab === 'profile' ? 'bg-accent text-accent-foreground' : ''
                     }`}
                     onClick={() => setActiveTab('profile')}
+                    aria-label="View profile"
+                    aria-current={activeTab === 'profile' ? 'page' : undefined}
                   >
                     <UserCircle className="h-4 w-4 mr-2" />
                     {t('profile')}
@@ -491,6 +561,7 @@ case 'profile':
                 onClick={() => setMobileMenuOpen(prev => !prev)}
                 aria-label="Toggle menu"
                 className="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
+                aria-expanded={mobileMenuOpen}
               >
                 {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
@@ -510,6 +581,7 @@ case 'profile':
                 setActiveTab('overview');
                 setMobileMenuOpen(false);
               }}
+              aria-label="View financial overview"
             >
               <Eye className="h-5 w-5" />
               {t('overview')}
@@ -523,6 +595,7 @@ case 'profile':
                 setActiveTab('add-income');
                 setMobileMenuOpen(false);
               }}
+              aria-label="Add income"
             >
               <Plus className="h-5 w-5" />
               {t('addIncome')}
@@ -536,6 +609,7 @@ case 'profile':
                 setActiveTab('add-expense');
                 setMobileMenuOpen(false);
               }}
+              aria-label="Add expense"
             >
               <Minus className="h-5 w-5" />
               {t('addExpense')}
@@ -549,9 +623,10 @@ case 'profile':
                 setActiveTab('transfer');
                 setMobileMenuOpen(false);
               }}
+              aria-label="Transfer funds"
             >
               <Repeat2 className="h-5 w-5" />
-              {('transferFunds')}
+              Transfer Funds
             </button>
 
             <button
@@ -562,6 +637,7 @@ case 'profile':
                 setActiveTab('calendar');
                 setMobileMenuOpen(false);
               }}
+              aria-label="View calendar"
             >
               <Calendar className="h-5 w-5" />
               {t('calendar')}
@@ -575,6 +651,7 @@ case 'profile':
                 setActiveTab('analytics');
                 setMobileMenuOpen(false);
               }}
+              aria-label="View analytics"
             >
               <BarChart3 className="h-5 w-5" />
               {t('analytics')}
@@ -588,6 +665,7 @@ case 'profile':
                 setActiveTab('search');
                 setMobileMenuOpen(false);
               }}
+              aria-label="Search transactions"
             >
               <Search className="h-5 w-5" />
               {t('search')}
@@ -596,7 +674,7 @@ case 'profile':
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center w-full gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none">
                 <Menu className="h-5 w-5" />
-                {('more')}
+                More
                 <ChevronDown className="ml-auto h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-[calc(100vw-32px)] p-1">
@@ -606,6 +684,7 @@ case 'profile':
                     setMobileMenuOpen(false);
                   }}
                   className="flex items-center gap-3"
+                  aria-label="View notes"
                 >
                   <StickyNote className="h-5 w-5" />
                   {t('notes')}
@@ -616,9 +695,10 @@ case 'profile':
                     setMobileMenuOpen(false);
                   }}
                   className="flex items-center gap-3"
+                  aria-label="View profile"
                 >
-                  <UserCircle className="h-8 w-7" />
-                  {('profile')}
+                  <UserCircle className="h-5 w-5" />
+                  {t('profile')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -630,7 +710,11 @@ case 'profile':
         </div>
       )}
 
-      <main className="container mx-auto px-6 py-6">{renderContent()}</main>
+      <main className="container mx-auto px-6 py-6">
+        <Suspense fallback={<Spinner />}>
+          {renderContent()}
+        </Suspense>
+      </main>
     </div>
   );
 };

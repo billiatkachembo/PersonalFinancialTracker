@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -49,39 +45,15 @@ All colors MUST be HSL.
     --warning-foreground: 0 0% 98%;
     --warning-light: 38 92% 95%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%));
-    --gradient-income: linear-gradient(135deg, hsl(142 76% 36%), hsl(158 64% 52%));
-    --gradient-expense: linear-gradient(135deg, hsl(0 84.2% 60.2%), hsl(14 91% 60%));
-    --gradient-subtle: linear-gradient(180deg, hsl(248 250 252), hsl(241 245 249));
-
-    /* Shadows */
-    --shadow-soft: 0 1px 3px 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-medium: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
-    --shadow-large: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
-    --shadow-income: 0 4px 20px -4px hsl(142 76% 36% / 0.3);
-    --shadow-expense: 0 4px 20px -4px hsl(0 84.2% 60.2% / 0.3);
-
-    /* Animations */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -122,18 +94,61 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
 }
 
 @layer utilities {
-  .bg-background { background-color: hsl(var(--background)); }
-  .text-foreground { color: hsl(var(--foreground)); }
-  .border-border { border-color: hsl(var(--border)); }
-}
-
-/* Apply them safely */
-body {
-  @apply bg-background text-foreground;
-}
-* {
-  @apply border-border;
+  .bg-background { 
+    background-color: hsl(var(--background)); 
+  }
+  .text-foreground { 
+    color: hsl(var(--foreground)); 
+  }
+  .border-border { 
+    border-color: hsl(var(--border)); 
+  }
+  
+  /* Financial utilities */
+  .bg-income { 
+    background-color: hsl(var(--income)); 
+  }
+  .text-income { 
+    color: hsl(var(--income)); 
+  }
+  .bg-expense { 
+    background-color: hsl(var(--expense)); 
+  }
+  .text-expense { 
+    color: hsl(var(--expense)); 
+  }
+  
+  /* Gradient classes */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(142, 76%, 36%), hsl(142, 76%, 46%));
+  }
+  .gradient-income {
+    background: linear-gradient(135deg, hsl(142, 76%, 36%), hsl(158, 64%, 52%));
+  }
+  .gradient-expense {
+    background: linear-gradient(135deg, hsl(0, 84%, 60%), hsl(14, 91%, 60%));
+  }
+  
+  /* Shadow classes */
+  .shadow-soft {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  }
+  .shadow-income {
+    box-shadow: 0 4px 20px -4px rgba(72, 187, 120, 0.3);
+  }
+  .shadow-expense {
+    box-shadow: 0 4px 20px -4px rgba(245, 101, 101, 0.3);
+  }
 }

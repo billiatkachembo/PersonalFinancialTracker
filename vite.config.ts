@@ -9,10 +9,10 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       workbox: {
-        globPatterns: ["**/*.{js,css,html,json}"],
+        globPatterns: ["**/*.{js,css,html,json,ico,png,svg}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
-      includeAssets: ["favicon.ico"],
+      includeAssets: ["favicon.ico", "**/*.{js,css,html,json,ico,png,svg}"],
       manifest: {
         name: "Money Manager",
         short_name: "MoneyManager",
@@ -27,6 +27,16 @@ export default defineConfig({
             sizes: "64x64 32x32 24x24 16x16",
             type: "image/x-icon",
           },
+          {
+            src: "pwa-192x192.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
+          {
+            src: "pwa-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
+          }
         ],
       },
     }),
@@ -40,10 +50,40 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
+    // CSS optimization
+    cssCodeSplit: true,
+    // Ensure CSS is properly processed
     rollupOptions: {
-      output: { inlineDynamicImports: false },
+      onwarn(warning, defaultHandler) {
+        if (warning.code === 'EVAL' && warning.id && warning.id.includes('gapi-script')) {
+          return; // Ignore gapi-script eval warnings
+        }
+        defaultHandler(warning);
+      },
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          // This helps with CSS splitting
+        },
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+            return 'assets/css/[name]-[hash][extname]';
+          }
+          return 'assets/[name]-[hash][extname]';
+        },
+      },
     },
   },
-  esbuild: { legalComments: "none" },
-  css: { postcss: "./postcss.config.js" },
+  // CSS configuration
+  css: {
+    postcss: "./postcss.config.js",
+    modules: {
+      localsConvention: "camelCase",
+    },
+  },
+  // Optimize build
+  esbuild: {
+    legalComments: "none",
+    treeShaking: true,
+  },
 });

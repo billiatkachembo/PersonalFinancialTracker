@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Theme = 'dark' | 'light' | 'system';
@@ -16,6 +17,9 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// SSR check
+const isServer = typeof window === 'undefined';
+
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
   defaultTheme = 'system',
@@ -26,7 +30,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   // Set theme and persist to localStorage
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem(storageKey, newTheme);
+    if (!isServer) {
+      localStorage.setItem(storageKey, newTheme);
+    }
   };
 
   // Toggle between light and dark
@@ -37,6 +43,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
 
   // Apply theme class on <html> and listen for system changes if needed
   useEffect(() => {
+    if (isServer) return;
+
     const root = window.document.documentElement;
 
     const applyThemeClass = (effectiveTheme: 'dark' | 'light') => {
@@ -62,11 +70,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
 
   // Load theme from localStorage on mount
   useEffect(() => {
+    if (isServer) return;
+
     const stored = localStorage.getItem(storageKey) as Theme | null;
     if (stored && stored !== theme) {
       setThemeState(stored);
     }
-  }, [storageKey]);
+  }, [storageKey, theme]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
@@ -77,6 +87,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  if (!context) throw new Error('useTheme must be used within ThemeProvider');
+  if (!context) {
+    console.warn('useTheme must be used within ThemeProvider. Returning default theme.');
+    // Fallback to prevent crashes when used outside provider
+    return {
+      theme: 'system' as Theme,
+      setTheme: () => console.warn('ThemeProvider not available'),
+      toggleTheme: () => console.warn('ThemeProvider not available'),
+    };
+  }
   return context;
 };

@@ -23,19 +23,47 @@ interface Note {
 
 export const Notes: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newNote, setNewNote] = useState({ title: '', content: '', category: '' });
   const { t } = useLanguage();
 
+  const MAX_CONTENT_LENGTH = 1000;
+
   useEffect(() => {
-    const savedNotes = localStorage.getItem('finance-notes');
-    if (savedNotes) setNotes(JSON.parse(savedNotes));
+    try {
+      const savedNotes = localStorage.getItem('finance-notes');
+      if (savedNotes) setNotes(JSON.parse(savedNotes));
+    } catch (error) {
+      console.error('Failed to load notes from localStorage:', error);
+    }
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('finance-notes', JSON.stringify(notes));
+    try {
+      localStorage.setItem('finance-notes', JSON.stringify(notes));
+    } catch (error) {
+      console.error('Failed to save notes to localStorage:', error);
+    }
   }, [notes]);
+
+  // ESC key to cancel editing
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setEditingId(null);
+        if (isAdding) {
+          setIsAdding(false);
+          setNewNote({ title: '', content: '', category: '' });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isAdding]);
 
   const handleAddNote = () => {
     if (newNote.title.trim() || newNote.content.trim()) {
@@ -58,10 +86,16 @@ export const Notes: React.FC = () => {
   };
 
   const handleDeleteNote = (id: string) => {
-    setNotes((prev) => prev.filter((note) => note.id !== id));
+    if (window.confirm('Are you sure you want to delete this note?')) {
+      setNotes((prev) => prev.filter((note) => note.id !== id));
+    }
   };
 
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString();
+
+  if (isLoading) {
+    return <div className="flex justify-center p-8">Loading notes...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -71,17 +105,16 @@ export const Notes: React.FC = () => {
             <FileText className="h-5 w-5" aria-hidden="true" />
             {t('notes')}
           </CardTitle>
-           <CardDescription>Manage your financial notes and reminders</CardDescription>
+          <CardDescription>Manage your financial notes and reminders</CardDescription>
         </CardHeader>
         <CardContent>
           {!isAdding ? (
-            <Button onClick={() => setIsAdding(true)} className="w-80% flex items-center">
+            <Button onClick={() => setIsAdding(true)} className="w-full sm:w-auto flex items-center">
               <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
               Add Note
             </Button>
           ) : (
             <div className="space-y-4">
-              
               <Input
                 placeholder='Note Title'
                 value={newNote.title}
@@ -101,6 +134,11 @@ export const Notes: React.FC = () => {
                 rows={4}
                 aria-label={t('noteContent')}
               />
+              {newNote.content.length > MAX_CONTENT_LENGTH * 0.8 && (
+                <p className="text-sm text-muted-foreground">
+                  {newNote.content.length}/{MAX_CONTENT_LENGTH} characters
+                </p>
+              )}
               <div className="flex gap-2">
                 <Button onClick={handleAddNote}>
                   <Save className="h-4 w-4 mr-2" aria-hidden="true" />
@@ -122,12 +160,16 @@ export const Notes: React.FC = () => {
         </CardContent>
       </Card>
 
-      {notes.length === 0 ? (
+      {notes.length === 0 && !isAdding ? (
         <Card className="shadow-soft">
           <CardContent className="text-center py-12">
             <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" aria-hidden="true" />
             <p className="text-lg font-medium mb-2">{t('noNotes')}</p>
-           <p className="text-muted-foreground">Start by adding your first note</p>
+            <p className="text-muted-foreground mb-4">Start by adding your first note</p>
+            <Button onClick={() => setIsAdding(true)}>
+              <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
+              Create Your First Note
+            </Button>
           </CardContent>
         </Card>
       ) : (
