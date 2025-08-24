@@ -1,0 +1,21 @@
+{
+  "name": "Personal Financial Tracker",
+  "short_name": "FinanceTracker",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2F855A",
+  "description": "Manage your personal finances with ease",
+  "icons": [
+    {
+      "src": "favicon.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "favicon.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
