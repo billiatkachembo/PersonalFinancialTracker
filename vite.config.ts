@@ -17,4 +17,6 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "src"),
     },
   },
+  // 👇 this is required for GitHub Pages
+  base: "/PersonalFinancialTracker/",
 }));
