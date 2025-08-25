@@ -46,15 +46,6 @@
     --warning-light: 38 92% 95%;
 
     --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -85,14 +76,6 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   * {
@@ -129,26 +112,50 @@
   .text-expense { 
     color: hsl(var(--expense)); 
   }
-  
-  /* Gradient classes */
-  .gradient-primary {
-    background: linear-gradient(135deg, hsl(142, 76%, 36%), hsl(142, 76%, 46%));
+}
+
+@layer components {
+  /* Fix dropdown transparency for Shadcn/ui components */
+  [data-radix-popper-content-wrapper] > div {
+    background-color: hsl(var(--background)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    color: hsl(var(--foreground)) !important;
   }
-  .gradient-income {
-    background: linear-gradient(135deg, hsl(142, 76%, 36%), hsl(158, 64%, 52%));
+
+  /* Navigation Menu */
+  [data-radix-navigation-menu-content] {
+    background-color: hsl(var(--background)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
   }
-  .gradient-expense {
-    background: linear-gradient(135deg, hsl(0, 84%, 60%), hsl(14, 91%, 60%));
+
+  /* Dropdown Menu */
+  [data-radix-dropdown-menu-content] {
+    background-color: hsl(var(--background)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
   }
-  
-  /* Shadow classes */
-  .shadow-soft {
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+
+  /* Select Dropdown */
+  [data-radix-select-content] {
+    background-color: hsl(var(--background)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
   }
-  .shadow-income {
-    box-shadow: 0 4px 20px -4px rgba(72, 187, 120, 0.3);
+
+  /* Menu items */
+  [data-radix-navigation-menu-content] a,
+  [data-radix-dropdown-menu-item],
+  [data-radix-select-item] {
+    background-color: transparent !important;
+    color: hsl(var(--foreground)) !important;
   }
-  .shadow-expense {
-    box-shadow: 0 4px 20px -4px rgba(245, 101, 101, 0.3);
+
+  [data-radix-navigation-menu-content] a:hover,
+  [data-radix-dropdown-menu-item]:hover,
+  [data-radix-select-item]:hover {
+    background-color: hsl(var(--accent)) !important;
+    color: hsl(var(--accent-foreground)) !important;
   }
 }

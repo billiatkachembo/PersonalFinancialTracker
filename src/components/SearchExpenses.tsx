@@ -11,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, X, Calendar } from 'lucide-react';
-import { Transaction } from './FinancialTracker';
+import { Transaction } from '@/types/financial';
 import { ExpenseList } from './ExpenseList';
 import { IncomeList } from './IncomeList';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -23,6 +23,30 @@ interface SearchExpensesProps {
   onDeleteExpense: (id: string) => void;
   onDeleteIncome: (id: string) => void;
 }
+
+// Helper function to calculate the date cutoff based on a filter period
+const getDateCutoff = (filter: string): Date | null => {
+  const now = new Date();
+  const cutoffDate = new Date(now);
+
+  switch (filter) {
+    case 'week':
+      cutoffDate.setDate(now.getDate() - 7);
+      break;
+    case 'month':
+      cutoffDate.setMonth(now.getMonth() - 1);
+      break;
+    case '3months':
+      cutoffDate.setMonth(now.getMonth() - 3);
+      break;
+    case 'year':
+      cutoffDate.setFullYear(now.getFullYear() - 1);
+      break;
+    case 'all':
+      return null;
+  }
+  return cutoffDate;
+};
 
 export const SearchExpenses: React.FC<SearchExpensesProps> = ({
   expenses,
@@ -42,12 +66,14 @@ export const SearchExpenses: React.FC<SearchExpensesProps> = ({
       ...expenses.map((e) => e.category),
       ...income.map((i) => i.category),
     ]);
-    return Array.from(categories).sort();
+    // Filter out any empty strings or null values that would break the Select component
+    return Array.from(categories).filter(Boolean).sort();
   }, [expenses, income]);
 
-  const filteredTransactions = useMemo(() => {
+  const { filteredTransactions, filteredExpenses, filteredIncome } = useMemo(() => {
     let allTransactions = [...expenses, ...income];
 
+    // Apply text search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       allTransactions = allTransactions.filter((transaction) =>
@@ -57,56 +83,43 @@ export const SearchExpenses: React.FC<SearchExpensesProps> = ({
       );
     }
 
+    // Apply category filter
     if (categoryFilter !== 'all') {
       allTransactions = allTransactions.filter(
         (transaction) => transaction.category === categoryFilter
       );
     }
 
+    // Apply type filter
     if (typeFilter !== 'all') {
       allTransactions = allTransactions.filter(
         (transaction) => transaction.type === typeFilter
       );
     }
 
-    if (dateFilter !== 'all') {
-      const now = new Date();
-      let cutoffDate: Date;
-
-      switch (dateFilter) {
-        case 'week':
-          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case 'month':
-          cutoffDate = new Date(now);
-          cutoffDate.setMonth(now.getMonth() - 1);
-          if (cutoffDate.getDate() !== now.getDate()) cutoffDate.setDate(0);
-          break;
-        case '3months':
-          cutoffDate = new Date(now);
-          cutoffDate.setMonth(now.getMonth() - 3);
-          if (cutoffDate.getDate() !== now.getDate()) cutoffDate.setDate(0);
-          break;
-        case 'year':
-          cutoffDate = new Date(now);
-          cutoffDate.setFullYear(now.getFullYear() - 1);
-          break;
-        default:
-          cutoffDate = new Date(0);
-      }
-
+    // Apply date filter
+    const cutoffDate = getDateCutoff(dateFilter);
+    if (cutoffDate) {
       allTransactions = allTransactions.filter(
         (transaction) => new Date(transaction.date) >= cutoffDate
       );
     }
 
-    return allTransactions.sort(
+    // Sort transactions by date (most recent first)
+    allTransactions.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-  }, [expenses, income, searchTerm, categoryFilter, typeFilter, dateFilter]);
 
-  const filteredExpenses = filteredTransactions.filter((t) => t.type === 'expense');
-  const filteredIncome = filteredTransactions.filter((t) => t.type === 'income');
+    // Separate filtered transactions into expenses and income
+    const expensesList = allTransactions.filter((t) => t.type === 'expense');
+    const incomeList = allTransactions.filter((t) => t.type === 'income');
+
+    return {
+      filteredTransactions: allTransactions,
+      filteredExpenses: expensesList,
+      filteredIncome: incomeList,
+    };
+  }, [expenses, income, searchTerm, categoryFilter, typeFilter, dateFilter]);
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -236,7 +249,7 @@ export const SearchExpenses: React.FC<SearchExpensesProps> = ({
           {t('foundTransactions', {
             total: filteredTransactions.length,
             income: filteredIncome.length,
-            expenses: filteredExpenses.length
+            expenses: filteredExpenses.length,
           })}
         </div>
 
@@ -267,7 +280,9 @@ export const SearchExpenses: React.FC<SearchExpensesProps> = ({
           {filteredIncome.length > 0 && (
             <Card className="shadow-soft">
               <CardHeader>
-                <CardTitle className="text-income">{t('income')} ({filteredIncome.length})</CardTitle>
+                <CardTitle className="text-income">
+                  {t('income')} ({filteredIncome.length})
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <IncomeList income={filteredIncome} onDelete={onDeleteIncome} />
@@ -278,7 +293,9 @@ export const SearchExpenses: React.FC<SearchExpensesProps> = ({
           {filteredExpenses.length > 0 && (
             <Card className="shadow-soft">
               <CardHeader>
-                <CardTitle className="text-expense">{t('expenses')} ({filteredExpenses.length})</CardTitle>
+                <CardTitle className="text-expense">
+                  {t('expenses')} ({filteredExpenses.length})
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ExpenseList expenses={filteredExpenses} onDelete={onDeleteExpense} />
