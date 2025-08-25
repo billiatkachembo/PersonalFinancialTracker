@@ -32,93 +32,6 @@ interface ExpenseFormProps {
   onSubmit: (expense: ExpenseFormData) => void;
 }
 
-/**
- * A safe and secure custom function to evaluate a basic arithmetic expression
- * without using `eval()` or `new Function()`.
- * This approach is CSP-compliant.
- *
- * It works by using a regular expression to tokenize the string and then
- * processing the operations in order of precedence.
- */
-const safeEvaluateExpression = (expression: string): number => {
-  try {
-    // Sanitize the expression to prevent code injection.
-    const sanitizedExpression = expression.replace(/[^-()\d/*+.]/g, '');
-
-    // Replace all operators with spaces for splitting, while keeping them
-    const tokens = sanitizedExpression.match(/(\d+\.?\d*)|[+\-*/()]/g);
-    if (!tokens) return NaN;
-
-    // Use a simple stack-based approach for evaluation.
-    const values: number[] = [];
-    const operators: string[] = [];
-
-    const precedence: { [key: string]: number } = {
-      '+': 1,
-      '-': 1,
-      '*': 2,
-      '/': 2,
-    };
-
-    const applyOperator = () => {
-      const operator = operators.pop();
-      const right = values.pop();
-      const left = values.pop();
-
-      if (left === undefined || right === undefined || !operator) return NaN;
-
-      switch (operator) {
-        case '+':
-          values.push(left + right);
-          break;
-        case '-':
-          values.push(left - right);
-          break;
-        case '*':
-          values.push(left * right);
-          break;
-        case '/':
-          if (right === 0) throw new Error('Division by zero');
-          values.push(left / right);
-          break;
-        default:
-          return NaN;
-      }
-    };
-
-    for (const token of tokens) {
-      if (token === '(') {
-        operators.push(token);
-      } else if (token === ')') {
-        while (operators.length > 0 && operators[operators.length - 1] !== '(') {
-          applyOperator();
-        }
-        operators.pop(); // Pop the '('
-      } else if (precedence[token]) {
-        while (
-          operators.length > 0 &&
-          precedence[operators[operators.length - 1]] >= precedence[token]
-        ) {
-          applyOperator();
-        }
-        operators.push(token);
-      } else {
-        // It's a number
-        values.push(parseFloat(token));
-      }
-    }
-
-    while (operators.length > 0) {
-      applyOperator();
-    }
-
-    return values.length === 1 ? values[0] : NaN;
-  } catch (e) {
-    console.error('Calculation error:', e);
-    return NaN;
-  }
-};
-
 export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState<ExpenseFormData>({
     date: new Date().toISOString().split('T')[0],
@@ -153,22 +66,12 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
   const handleCalcInput = (char: string) => {
     if (char === '=') {
       try {
-        const expressionToEvaluate = calcExpression || formData.amount.toString();
-        const result = safeEvaluateExpression(expressionToEvaluate);
-        
-        if (isNaN(result) || !isFinite(result)) {
-          throw new Error('Invalid calculation');
-        }
-        
-        handleInputChange('amount', parseFloat(result.toFixed(2)));
+        const result = eval(calcExpression || formData.amount.toString());
+        handleInputChange('amount', parseFloat(result.toString()));
         setCalcExpression('');
         setIsCalculatorOpen(false);
       } catch {
-        toast({
-          title: t('error') || 'Error',
-          description: t('invalidCalculation') || 'Invalid calculation',
-          variant: 'destructive',
-        });
+        toast({ title: t('error') || 'Error', description: t('invalidCalculation') || 'Invalid calculation', variant: 'destructive' });
       }
     } else if (char === 'C') {
       setCalcExpression('');
@@ -190,7 +93,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [isCalculatorOpen, calcExpression, handleCalcInput]);
+  }, [isCalculatorOpen, calcExpression]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,11 +167,11 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
           <div className="flex relative">
             <Input
               id="expense-amount"
-              type="text"
-              inputMode="none"
+              type="number"
+              step="0.01"
+              min="0"
               value={calcExpression || formData.amount || ''}
-              readOnly
-              onClick={() => setIsCalculatorOpen(true)}
+              onChange={(e) => handleInputChange('amount', parseFloat(e.target.value))}
               placeholder="0.00"
               className="shadow-soft pr-10"
             />
@@ -283,22 +186,24 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit }) => {
             </Button>
           </div>
 
-          {isCalculatorOpen && (
-            <div className="absolute top-16 right-0 w-64 p-2 rounded-lg shadow-md bg-background text-foreground z-50">
+        {isCalculatorOpen && (
+  <div  className="inline top-16 right-10 w-64 p-2 rounded-lg shadow-md bg-background text-foreground z-50">
+
               <div className="mb-2 text-right font-mono select-none border-b-2 pb-1 border-gray-200">
-                {calcExpression || formData.amount || '0'}
-              </div>
-              <div className="grid grid-cols-5 gap-1">
-                {['7','8','9','+','4','5','6','-','1','2','3','*','0','.','=','/','C','DEL'].map((char) => (
-                  <Button key={char} type="button" variant="outline" size="sm" onClick={() => handleCalcInput(char)}>
-                    {char}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {calcExpression || formData.amount || '0'}
+    </div>
+    <div className="grid grid-cols-5 gap-1">
+      {['7','8','9','+','4','5','6','-','1','2','3','*','0','.','=','/','C','DEL'].map((char) => (
+        <Button key={char} type="button" variant="outline" size="sm" onClick={() => handleCalcInput(char)}>
+          {char}
+        </Button>
+      ))}
+    </div>
+  </div>
+)}
+</div>
+</div>
+
       {/* Category, Account, Repeat */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">

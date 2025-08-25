@@ -698,7 +698,7 @@ const FinancialTracker = () => {
                   aria-label="View profile"
                 >
                   <UserCircle className="h-5 w-5" />
-                  {t('profile')}
+                  {('profile')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
